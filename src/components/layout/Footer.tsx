@@ -1,147 +1,131 @@
+// src/components/layout/Footer.tsx
 "use client";
 
+import { useApp } from "@/context/AppContext";
+
+const navLinks = {
+  en: [
+    { label: "Home",    href: "#home"    },
+    { label: "About",   href: "#about"   },
+    { label: "Skills",  href: "#skills"  },
+    { label: "Works",   href: "#works"   },
+    { label: "Contact", href: "#contact" },
+  ],
+  id: [
+    { label: "Beranda",  href: "#home"    },
+    { label: "Tentang",  href: "#about"   },
+    { label: "Keahlian", href: "#skills"  },
+    { label: "Karya",    href: "#works"   },
+    { label: "Kontak",   href: "#contact" },
+  ],
+};
+
+const content = {
+  en: {
+    cta: "Start something.",
+    ctaLink: "Get in touch →",
+    copy: `© ${new Date().getFullYear()} Raditya`,
+    stack: "Next.js · Tailwind · Framer Motion",
+    legal: [
+      { label: "Privacy", href: "#" },
+      { label: "Terms",   href: "#" },
+    ],
+  },
+  id: {
+    cta: "Mulai sesuatu.",
+    ctaLink: "Hubungi saya →",
+    copy: `© ${new Date().getFullYear()} Raditya`,
+    stack: "Next.js · Tailwind · Framer Motion",
+    legal: [
+      { label: "Privasi",   href: "#" },
+      { label: "Ketentuan", href: "#" },
+    ],
+  },
+};
+
 export default function Footer() {
+  const { language, theme } = useApp();
+  const t = content[language];
+  const nav = navLinks[language];
+  const isLight = theme === "light";
+
+  const bg      = isLight ? "bg-white"       : "bg-black";
+  const border  = isLight ? "border-black/10" : "border-white/10";
+  const nameClr = isLight ? "text-zinc-900"   : "text-white";
+  const ctaClr  = isLight ? "text-zinc-400"   : "text-zinc-600";
+  const linkClr = isLight
+    ? "text-zinc-400 hover:text-zinc-900"
+    : "text-zinc-600 hover:text-white";
+  const metaClr = isLight ? "text-zinc-400"   : "text-zinc-600";
+  const divClr  = isLight ? "bg-black/8"      : "bg-white/10";
+
   return (
-    <footer className="relative overflow-hidden border-t border-white/10 bg-black text-white">
-      {/* BACKGROUND */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute left-[-120px] top-[-120px] h-[280px] w-[280px] rounded-full bg-cyan-500/20 blur-3xl" />
+    <footer className={`border-t ${border} ${bg} transition-colors duration-300`}>
+      <div className="mx-auto max-w-7xl px-6">
 
-        <div className="absolute bottom-[-140px] right-[-140px] h-[320px] w-[320px] rounded-full bg-fuchsia-500/20 blur-3xl" />
-      </div>
-
-      <div className="relative z-10 mx-auto max-w-7xl px-6 py-14">
-        {/* TOP */}
-        <div className="flex flex-col gap-10 border-b border-white/10 pb-10 lg:flex-row lg:items-center lg:justify-between">
-          {/* BRAND */}
-          <div className="max-w-xl">
-            <h2 className="text-3xl font-black tracking-tight">
-              YourName.
-            </h2>
-
-            <p className="mt-4 text-base leading-relaxed text-zinc-400">
-              Crafting modern, responsive, and high-performance
-              digital experiences with clean design and smooth user
-              interaction.
-            </p>
-          </div>
-
-          {/* NAVIGATION */}
-          <div className="flex flex-wrap gap-3">
-            <a
-              href="#home"
-              className="
-                rounded-2xl border border-white/10
-                bg-white/5 px-5 py-3 text-sm
-                text-zinc-300 transition-all duration-300
-                hover:-translate-y-1
-                hover:border-cyan-400
-                hover:bg-cyan-500/10
-                hover:text-cyan-400
-              "
-            >
-              Home
-            </a>
-
-            <a
-              href="#about"
-              className="
-                rounded-2xl border border-white/10
-                bg-white/5 px-5 py-3 text-sm
-                text-zinc-300 transition-all duration-300
-                hover:-translate-y-1
-                hover:border-cyan-400
-                hover:bg-cyan-500/10
-                hover:text-cyan-400
-              "
-            >
-              About
-            </a>
-
-            <a
-              href="#skills"
-              className="
-                rounded-2xl border border-white/10
-                bg-white/5 px-5 py-3 text-sm
-                text-zinc-300 transition-all duration-300
-                hover:-translate-y-1
-                hover:border-cyan-400
-                hover:bg-cyan-500/10
-                hover:text-cyan-400
-              "
-            >
-              Skills
-            </a>
-
-            <a
-              href="#works"
-              className="
-                rounded-2xl border border-white/10
-                bg-white/5 px-5 py-3 text-sm
-                text-zinc-300 transition-all duration-300
-                hover:-translate-y-1
-                hover:border-cyan-400
-                hover:bg-cyan-500/10
-                hover:text-cyan-400
-              "
-            >
-              Works
-            </a>
-
-            <a
-              href="#contact"
-              className="
-                rounded-2xl border border-white/10
-                bg-white/5 px-5 py-3 text-sm
-                text-zinc-300 transition-all duration-300
-                hover:-translate-y-1
-                hover:border-cyan-400
-                hover:bg-cyan-500/10
-                hover:text-cyan-400
-              "
-            >
-              Contact
-            </a>
-          </div>
-        </div>
-
-        {/* BOTTOM */}
-        <div className="mt-8 flex flex-col gap-4 text-sm text-zinc-500 md:flex-row md:items-center md:justify-between">
-          <p>
-            © 2026 YourName. All rights reserved.
+        {/* ── BIG TYPE BLOCK ─────────────────────────────────────── */}
+        <div className="pt-16 pb-12">
+          <p className={`text-xs uppercase tracking-[0.3em] font-medium mb-6 ${ctaClr}`}>
+            {t.cta}
           </p>
 
-          <div className="flex items-center gap-5">
-            <a
-              href="#"
-              className="
-                transition-colors duration-300
-                hover:text-cyan-400
-              "
-            >
-              Privacy Policy
-            </a>
+          <h2
+            className={`font-black leading-none tracking-[-0.04em] ${nameClr}`}
+            style={{ fontSize: "clamp(3.5rem, 14vw, 10rem)" }}
+          >
+            RADITYA
+          </h2>
 
-            <a
-              href="#"
-              className="
-                transition-colors duration-300
-                hover:text-cyan-400
-              "
-            >
-              Terms
-            </a>
+          <a
+            href="#contact"
+            className={`
+              inline-block mt-6 text-sm font-medium tracking-wide
+              border-b pb-0.5 transition-all duration-200
+              ${isLight
+                ? "border-zinc-300 text-zinc-500 hover:border-zinc-900 hover:text-zinc-900"
+                : "border-zinc-700 text-zinc-500 hover:border-white hover:text-white"
+              }
+            `}
+          >
+            {t.ctaLink}
+          </a>
+        </div>
 
-            <a
-              href="#"
-              className="
-                transition-colors duration-300
-                hover:text-cyan-400
-              "
-            >
-              Sitemap
-            </a>
+        {/* ── DIVIDER ────────────────────────────────────────────── */}
+        <div className={`h-px ${divClr}`} />
+
+        {/* ── BOTTOM BAR ─────────────────────────────────────────── */}
+        <div className="py-7 flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+
+          <div className="flex flex-col gap-1">
+            <span className={`text-xs ${metaClr}`}>{t.copy}</span>
+            <span className={`text-xs ${metaClr} opacity-60`}>{t.stack}</span>
           </div>
+
+          <nav className="flex flex-wrap gap-x-6 gap-y-2">
+            {nav.map((item) => (
+              <a
+                key={item.href}
+                href={item.href}
+                className={`text-xs transition-colors duration-200 ${linkClr}`}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+
+          <div className="flex gap-5">
+            {t.legal.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                className={`text-xs transition-colors duration-200 ${linkClr}`}
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+
         </div>
       </div>
     </footer>

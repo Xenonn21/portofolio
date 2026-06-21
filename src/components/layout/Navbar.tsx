@@ -1,3 +1,4 @@
+// src/components/layout/Navbar.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -146,8 +147,8 @@ export default function Navbar() {
 
         {/* Logo */}
         <a href="/" className={`flex items-center gap-3 rounded-full border p-1 backdrop-blur transition-colors duration-300 ${navBg}`}>
-          <div className={`flex h-10 w-10 items-center justify-center rounded-full border ${logoCircle}`}>
-            <span className={`text-sm font-semibold ${logoText}`}>RA</span>
+          <div className={`flex h-10 w-10 items-center justify-center rounded-full overflow-hidden border ${logoCircle}`}>
+            <img src="favicon.ico" className={`text-sm font-semibold ${logoText}`}></img>
           </div>
           <span className={`text-sm mr-2 font-semibold ${logoText}`}>RADITYA</span>
         </a>
