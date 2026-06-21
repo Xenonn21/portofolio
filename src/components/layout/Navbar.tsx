@@ -81,25 +81,39 @@ export default function Navbar() {
   const navRef = useRef<HTMLElement | null>(null);
   const itemRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
 
+  const mobileNavRef = useRef<HTMLElement | null>(null);
+  const mobileItemRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
+
   const [pillStyle, setPillStyle] = useState({ left: 0, width: 0, opacity: 0 });
+  const [mobilePillStyle, setMobilePillStyle] = useState({ left: 0, width: 0, opacity: 0 });
 
   const isLight = theme === "light";
 
   const computePill = (id: SectionId) => {
-    if (!navRef.current || !itemRefs.current[id]) return;
-    const navRect = navRef.current.getBoundingClientRect();
-    const itemRect = itemRefs.current[id]?.getBoundingClientRect();
-    if (!itemRect) return;
-    setPillStyle({ left: itemRect.left - navRect.left, width: itemRect.width, opacity: 1 });
+    const navEl = navRef.current;
+    const itemEl = itemRefs.current[id];
+    if (!navEl || !itemEl) return;
+    setPillStyle({ left: itemEl.offsetLeft, width: itemEl.offsetWidth, opacity: 1 });
+  };
+
+  const computeMobilePill = (id: SectionId) => {
+    const navEl = mobileNavRef.current;
+    const itemEl = mobileItemRefs.current[id];
+    if (!navEl || !itemEl) return;
+    setMobilePillStyle({ left: itemEl.offsetLeft, width: itemEl.offsetWidth, opacity: 1 });
   };
 
   useEffect(() => {
     const target = hoveredItem ?? activeSection;
     computePill(target);
+    computeMobilePill(activeSection);
   }, [hoveredItem, activeSection]);
 
   useEffect(() => {
-    const handleResize = () => computePill(hoveredItem ?? activeSection);
+    const handleResize = () => {
+      computePill(hoveredItem ?? activeSection);
+      computeMobilePill(activeSection);
+    };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [hoveredItem, activeSection]);
@@ -142,84 +156,111 @@ export default function Navbar() {
   const logoCircle = isLight ? "border-black/10 bg-black/[0.03]" : "border-white/10 bg-white/[0.03]";
 
   return (
-    <header className="fixed top-5 left-0 z-50 w-full px-6">
-      <div className="mx-auto flex max-w-7xl items-center justify-between">
+    <>
+      <header className="fixed top-5 left-0 z-50 w-full px-6">
+        <div className="mx-auto flex max-w-7xl items-center justify-between">
 
-        {/* Logo */}
-        <a href="/" className={`flex items-center gap-3 rounded-full border p-1 backdrop-blur transition-colors duration-300 ${navBg}`}>
-          <div className={`flex h-10 w-10 items-center justify-center rounded-full overflow-hidden border ${logoCircle}`}>
-            <img src="favicon.ico" className={`text-sm font-semibold ${logoText}`}></img>
-          </div>
-          <span className={`text-sm mr-2 font-semibold ${logoText}`}>RADITYA</span>
-        </a>
+          {/* Logo */}
+          <a href="/" className={`flex items-center gap-3 rounded-full border p-1 backdrop-blur transition-colors duration-300 ${navBg}`}>
+            <div className={`flex h-10 w-10 items-center justify-center rounded-full overflow-hidden border ${logoCircle}`}>
+              <img src="favicon.ico" className={`text-sm font-semibold ${logoText}`}></img>
+            </div>
+            <span className={`text-sm mr-2 font-semibold ${logoText}`}>RADITYA</span>
+          </a>
 
-        {/* Nav */}
-        <nav
-          ref={navRef}
-          className={`hidden md:flex relative items-center gap-1 rounded-full border p-1 backdrop-blur transition-colors duration-300 ${navBg}`}
-          onMouseLeave={() => setHoveredItem(null)}
-        >
-          <span
-            className={`pointer-events-none absolute top-1 bottom-1 rounded-full border transition-all duration-300 ${pillBg}`}
-            style={{ left: pillStyle.left, width: pillStyle.width, opacity: pillStyle.opacity }}
-          />
+          {/* Nav — desktop only */}
+          <nav
+            ref={navRef}
+            className={`hidden md:flex relative items-center gap-1 rounded-full border p-1 backdrop-blur transition-colors duration-300 ${navBg}`}
+            onMouseLeave={() => setHoveredItem(null)}
+          >
+            <span
+              className={`pointer-events-none absolute top-1 bottom-1 rounded-full border transition-all duration-300 ${pillBg}`}
+              style={{ left: pillStyle.left, width: pillStyle.width, opacity: pillStyle.opacity }}
+            />
 
-          {navItems.map((item) => (
-            <a
-              key={item.id}
-              href={item.href}
-              ref={(el) => { itemRefs.current[item.id] = el; }}
-              onMouseEnter={() => setHoveredItem(item.id)}
-              className={`relative z-10 flex items-center gap-2 rounded-full px-7 py-3 text-sm font-medium transition-colors
-                ${activeSection === item.id && !hoveredItem ? navTextActive : navTextInactive}`}
+            {navItems.map((item) => (
+              <a
+                key={item.id}
+                href={item.href}
+                ref={(el) => { itemRefs.current[item.id] = el; }}
+                onMouseEnter={() => setHoveredItem(item.id)}
+                className={`relative z-10 flex items-center gap-2 rounded-full px-7 py-3 text-sm font-medium transition-colors
+                  ${activeSection === item.id && !hoveredItem ? navTextActive : navTextInactive}`}
+              >
+                {item.icon}
+                {language === "en" ? item.labelEn : item.labelId}
+              </a>
+            ))}
+          </nav>
+
+          {/* Right — language & theme toggle */}
+          <div className={`flex items-center gap-1 rounded-full border p-1 backdrop-blur transition-colors duration-300 ${navBg}`}>
+
+            {/* Language toggle: globe icon, shows current lang as badge */}
+            <button
+              onClick={toggleLanguage}
+              title={language === "en" ? "Switch to Indonesian" : "Switch to English"}
+              aria-label="Toggle language"
+              className={`relative h-10 w-10 grid place-items-center rounded-full border transition-colors ${logoCircle} ${isLight ? "text-black/60 hover:text-black" : "text-white/70 hover:text-white"}`}
             >
-              {item.icon}
-              {language === "en" ? item.labelEn : item.labelId}
-            </a>
-          ))}
-        </nav>
-
-        {/* Right — language & theme toggle */}
-        <div className={`flex items-center gap-1 rounded-full border p-1 backdrop-blur transition-colors duration-300 ${navBg}`}>
-
-          {/* Language toggle: globe icon, shows current lang as badge */}
-          <button
-            onClick={toggleLanguage}
-            title={language === "en" ? "Switch to Indonesian" : "Switch to English"}
-            aria-label="Toggle language"
-            className={`relative h-10 w-10 grid place-items-center rounded-full border transition-colors ${logoCircle} ${isLight ? "text-black/60 hover:text-black" : "text-white/70 hover:text-white"}`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253M3 12a8.959 8.959 0 0 1 .284-2.253" />
-            </svg>
-            {/* Language badge */}
-            <span className="absolute -top-1 -right-1 flex h-4 w-5 items-center justify-center rounded-full bg-purple-500 text-[9px] font-bold text-white leading-none">
-              {language.toUpperCase()}
-            </span>
-          </button>
-
-          {/* Theme toggle: sun (light) / moon (dark) */}
-          <button
-            onClick={toggleTheme}
-            title={isLight ? "Switch to dark mode" : "Switch to light mode"}
-            aria-label="Toggle theme"
-            className={`h-10 w-10 grid place-items-center rounded-full border transition-colors ${logoCircle} ${isLight ? "text-black/60 hover:text-black" : "text-white/70 hover:text-white"}`}
-          >
-            {isLight ? (
-              /* Moon icon — click to go dark */
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253M3 12a8.959 8.959 0 0 1 .284-2.253" />
               </svg>
-            ) : (
-              /* Sun icon — click to go light */
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
-              </svg>
-            )}
-          </button>
+              {/* Language badge */}
+              <span className="absolute -top-1 -right-1 flex h-4 w-5 items-center justify-center rounded-full bg-purple-500 text-[9px] font-bold text-white leading-none">
+                {language.toUpperCase()}
+              </span>
+            </button>
+
+            {/* Theme toggle: sun (light) / moon (dark) */}
+            <button
+              onClick={toggleTheme}
+              title={isLight ? "Switch to dark mode" : "Switch to light mode"}
+              aria-label="Toggle theme"
+              className={`h-10 w-10 grid place-items-center rounded-full border transition-colors ${logoCircle} ${isLight ? "text-black/60 hover:text-black" : "text-white/70 hover:text-white"}`}
+            >
+              {isLight ? (
+                /* Moon icon — click to go dark */
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+                </svg>
+              ) : (
+                /* Sun icon — click to go light */
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="h-4 w-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+                </svg>
+              )}
+            </button>
+          </div>
+
         </div>
+      </header>
 
-      </div>
-    </header>
+      {/* Mobile bottom nav — icons only, no labels */}
+      <nav
+        ref={mobileNavRef}
+        className={`md:hidden fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-full border p-1 backdrop-blur transition-colors duration-300 ${navBg}`}
+      >
+        <span
+          className={`pointer-events-none absolute top-1 bottom-1 rounded-full border transition-all duration-300 ${pillBg}`}
+          style={{ left: mobilePillStyle.left, width: mobilePillStyle.width, opacity: mobilePillStyle.opacity }}
+        />
+
+        {navItems.map((item) => (
+          <a
+            key={item.id}
+            href={item.href}
+            ref={(el) => { mobileItemRefs.current[item.id] = el; }}
+            aria-label={language === "en" ? item.labelEn : item.labelId}
+            title={language === "en" ? item.labelEn : item.labelId}
+            className={`relative z-10 flex h-11 w-11 items-center justify-center rounded-full transition-colors
+              ${activeSection === item.id ? navTextActive : navTextInactive}`}
+          >
+            {item.icon}
+          </a>
+        ))}
+      </nav>
+    </>
   );
 }
