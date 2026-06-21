@@ -6,18 +6,23 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useApp } from "@/context/AppContext";
 
-import { FaReact, FaNodeJs, FaWordpress } from "react-icons/fa";
-import { SiTailwindcss, SiNextdotjs, SiTypescript } from "react-icons/si";
+import { FaReact, FaNodeJs, FaWordpress, FaHtml5, FaCss3Alt, FaJs } from "react-icons/fa";
+import { SiTailwindcss, SiNextdotjs, SiTypescript, SiPostgresql, SiExpress } from "react-icons/si";
 
 gsap.registerPlugin(ScrollTrigger);
 
 const skills = [
-  { name: "WORDPRESS",  icon: FaWordpress,   color: "#1296db" },
-  { name: "TAILWIND",   icon: SiTailwindcss, color: "#38BDF8" },
-  { name: "REACT.JS",   icon: FaReact,       color: "#61DAFB" },
-  { name: "NEXT.JS",    icon: SiNextdotjs,   color: "#000000" }, // overridden per theme
-  { name: "TYPESCRIPT", icon: SiTypescript,  color: "#3178C6" },
-  { name: "NODE.JS",    icon: FaNodeJs,      color: "#68A063" },
+  { name: "WordPress",  sub: "CMS & Theming",       icon: FaWordpress,   color: "#1296db" },
+  { name: "Tailwind",   sub: "Utility CSS",          icon: SiTailwindcss, color: "#38BDF8" },
+  { name: "React.js",   sub: "UI Library",           icon: FaReact,       color: "#61DAFB" },
+  { name: "Next.js",    sub: "Full-stack Framework", icon: SiNextdotjs,   color: null      },
+  { name: "TypeScript", sub: "Typed JavaScript",     icon: SiTypescript,  color: "#3178C6" },
+  { name: "Node.js",    sub: "Server Runtime",       icon: FaNodeJs,      color: "#68A063" },
+  { name: "HTML5",      sub: "Markup Language",      icon: FaHtml5,       color: "#E34F26" },
+  { name: "CSS3",       sub: "Styling & Layout",     icon: FaCss3Alt,     color: "#1572B6" },
+  { name: "JavaScript", sub: "Scripting Language",   icon: FaJs,          color: "#F7DF1E" },
+  { name: "PostgreSQL", sub: "Relational Database",  icon: SiPostgresql,  color: "#336791" },
+  { name: "Express.js", sub: "Node.js Framework",    icon: SiExpress,     color: null      },
 ];
 
 const content = {
@@ -39,7 +44,8 @@ export default function SkillsSection() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const labelRef   = useRef<HTMLParagraphElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
-  const cardRefs   = useRef<(HTMLDivElement | null)[]>([]);
+  const gridRef    = useRef<HTMLDivElement | null>(null);
+  const tileRefs   = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     const refresh = () => ScrollTrigger.refresh();
@@ -58,51 +64,99 @@ export default function SkillsSection() {
     const ctx = gsap.context(() => {
       const label   = labelRef.current;
       const heading = headingRef.current;
-      const cards   = cardRefs.current.filter(Boolean) as HTMLDivElement[];
+      const tiles   = tileRefs.current.filter(Boolean) as HTMLDivElement[];
 
-      if (!label || !heading || cards.length !== skills.length) return;
+      if (!label || !heading || tiles.length === 0) return;
 
-      const isMobile = window.innerWidth < 768;
+      const isMobile = window.innerWidth < 640;
+      const yOffset  = isMobile ? 24 : 36;
+      const scaleH   = 0.94;
 
-      const yLabel   = isMobile ? 20  : 28;
-      const yHeading = isMobile ? 44  : 64;
-      const yCard    = isMobile ? 50  : 72;
-      const scaleH   = isMobile ? 0.90 : 0.86;
+      // Urutkan tiles berdasarkan posisi visual (baris atas → bawah, kiri → kanan)
+      const orderedTiles = [...tiles].sort((a, b) => {
+        const ra = a.getBoundingClientRect();
+        const rb = b.getBoundingClientRect();
+        if (Math.abs(ra.top - rb.top) > 10) return ra.top - rb.top;
+        return ra.left - rb.left;
+      });
 
-      gsap.set(label,   { autoAlpha: 0, y: yLabel,   willChange: "transform, opacity" });
-      gsap.set(heading, { autoAlpha: 0, y: yHeading, scale: scaleH, transformOrigin: "center bottom", willChange: "transform, opacity" });
-      gsap.set(cards,   { autoAlpha: 0, y: yCard,    willChange: "transform, opacity" });
+      const allEls = [label, heading, ...orderedTiles];
+
+      // Set initial hidden state — semua dari bawah (y positif)
+      gsap.set(allEls, { autoAlpha: 0, willChange: "transform, opacity" });
+      gsap.set(label,   { y: yOffset });
+      gsap.set(heading, { y: yOffset * 1.2, scale: scaleH });
+      orderedTiles.forEach((tile) => gsap.set(tile, { y: yOffset * 0.8 }));
+
+      // ── Timeline di-scrub oleh scroll ────────────────────────────────
+      // Sama persis seperti About.tsx: scrub membuat animasi berjalan
+      // maju saat scroll ke bawah dan mundur saat scroll ke atas — otomatis.
+      //
+      // Pembagian progress (0 → 1):
+      //   0.00 – 0.08 : label masuk
+      //   0.06 – 0.14 : heading masuk
+      //   0.12 – 0.65 : tiles masuk satu per satu (11 tiles × ~0.048 interval)
+      //   0.65 – 0.72 : hold sebentar (semua terlihat)
+      //   0.72 – 0.78 : label keluar
+      //   0.76 – 0.84 : heading keluar
+      //   0.82 – 1.00 : tiles keluar satu per satu
+
+      const TILE_COUNT   = orderedTiles.length; // 11
+      const IN_START     = 0.12;
+      const IN_INTERVAL  = 0.048; // jarak antar tile masuk
+      const IN_DUR       = 0.06;  // durasi fade-in per tile
+
+      // Tile terakhir masuk di: IN_START + (TILE_COUNT - 1) * IN_INTERVAL
+      const lastTileInEnd = IN_START + (TILE_COUNT - 1) * IN_INTERVAL + IN_DUR; // ≈ 0.69
+
+      const HOLD_END     = lastTileInEnd + 0.04; // ≈ 0.73  — sedikit jeda
+
+      const OUT_LABEL_START   = HOLD_END;           // ≈ 0.73
+      const OUT_HEADING_START = HOLD_END + 0.05;    // ≈ 0.78
+      const OUT_TILE_START    = HOLD_END + 0.10;    // ≈ 0.83
+      const OUT_INTERVAL      = 0.038;
+      const OUT_DUR           = 0.05;
 
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: section,
-          start: "top 75%",
-          end:   "bottom 25%",
-          scrub: 2.2,
+          start: "top 85%",
+          end:   "bottom 15%",
+          scrub: 0.8,
           invalidateOnRefresh: true,
           fastScrollEnd: true,
         },
         defaults: { ease: "none" },
       });
 
-      tl
-        .to(label,    { autoAlpha: 1, y: 0,                   duration: 0.12 }, 0.00)
-        .to(heading,  { autoAlpha: 1, y: 0, scale: 1,         duration: 0.16 }, 0.07)
-        .to(cards[0], { autoAlpha: 1, y: 0,                   duration: 0.15 }, 0.20)
-        .to(cards[1], { autoAlpha: 1, y: 0,                   duration: 0.15 }, 0.26)
-        .to(cards[2], { autoAlpha: 1, y: 0,                   duration: 0.15 }, 0.30)
-        .to(cards[3], { autoAlpha: 1, y: 0,                   duration: 0.15 }, 0.34)
-        .to(cards[4], { autoAlpha: 1, y: 0,                   duration: 0.15 }, 0.38)
-        .to(cards[5], { autoAlpha: 1, y: 0,                   duration: 0.15 }, 0.42)
-        .to({}, { duration: 0.16 }, 0.42)
-        .to(label,    { autoAlpha: 0, y: yLabel,               duration: 0.11 }, 0.58)
-        .to(heading,  { autoAlpha: 0, y: yHeading, scale: scaleH, duration: 0.13 }, 0.65)
-        .to(cards[0], { autoAlpha: 0, y: yCard,               duration: 0.13 }, 0.73)
-        .to(cards[1], { autoAlpha: 0, y: yCard,               duration: 0.13 }, 0.78)
-        .to(cards[2], { autoAlpha: 0, y: yCard,               duration: 0.13 }, 0.82)
-        .to(cards[3], { autoAlpha: 0, y: yCard,               duration: 0.13 }, 0.86)
-        .to(cards[4], { autoAlpha: 0, y: yCard,               duration: 0.13 }, 0.89)
-        .to(cards[5], { autoAlpha: 0, y: yCard,               duration: 0.13 }, 0.92);
+      // ── ANIMASI MASUK ──────────────────────────────────────────────────
+
+      // 1. Label masuk
+      tl.to(label, { autoAlpha: 1, y: 0, duration: 0.08 }, 0.00);
+
+      // 2. Heading masuk
+      tl.to(heading, { autoAlpha: 1, y: 0, scale: 1, duration: 0.09 }, 0.06);
+
+      // 3. Tiles masuk satu per satu (card[0] dulu → card[10] terakhir)
+      orderedTiles.forEach((tile, i) => {
+        tl.to(tile, { autoAlpha: 1, y: 0, duration: IN_DUR }, IN_START + i * IN_INTERVAL);
+      });
+
+      // ── HOLD ─────────────────────────────────────────────────────────
+      tl.to({}, { duration: 0.04 }, lastTileInEnd);
+
+      // ── ANIMASI KELUAR ────────────────────────────────────────────────
+
+      // 4. Label keluar duluan
+      tl.to(label, { autoAlpha: 0, y: -(yOffset * 0.6), duration: 0.07 }, OUT_LABEL_START);
+
+      // 5. Heading keluar
+      tl.to(heading, { autoAlpha: 0, y: -(yOffset * 0.8), scale: scaleH, duration: 0.08 }, OUT_HEADING_START);
+
+      // 6. Tiles keluar satu per satu (card[0] dulu → card[10] terakhir)
+      orderedTiles.forEach((tile, i) => {
+        tl.to(tile, { autoAlpha: 0, y: -(yOffset * 0.6), duration: OUT_DUR }, OUT_TILE_START + i * OUT_INTERVAL);
+      });
 
       ScrollTrigger.refresh();
     }, section);
@@ -110,42 +164,45 @@ export default function SkillsSection() {
     return () => ctx.revert();
   }, []);
 
-  // ── Theme classes ──────────────────────────────────────────────────────
-  const sectionBg   = isLight ? "bg-gray-50"   : "bg-black";
-  const glowCenter  = isLight ? "bg-black/[0.03]" : "bg-white/[0.03]";
-  const glowCorner  = isLight ? "bg-purple-500/5"  : "bg-purple-500/10";
-  const labelColor  = isLight ? "text-black/50"    : "text-white/60";
-  const headingColor = isLight ? "text-zinc-900"   : "text-white";
-  const iconRingBg  = isLight
-    ? "border border-black/10 bg-black/[0.03]"
-    : "border border-white/10 bg-white/[0.03]";
-  const skillNameColor = isLight
-    ? "text-black/50 group-hover:text-black"
-    : "text-white/65 group-hover:text-white";
+  // ── theme ──────────────────────────────────────────────────────────────
+  const sectionBg    = isLight ? "bg-gray-50"            : "bg-black";
+  const glowCenter   = isLight ? "bg-black/[0.02]"       : "bg-white/[0.025]";
+  const glowCorner   = isLight ? "bg-purple-400/[0.06]"  : "bg-purple-500/[0.08]";
+  const labelColor   = isLight ? "text-black/45"         : "text-white/50";
+  const headingColor = isLight ? "text-zinc-900"         : "text-white";
+  const tileBg       = isLight ? "bg-white"              : "bg-white/[0.03]";
+  const tileBorder   = isLight ? "border-black/[0.08]"   : "border-white/[0.08]";
+  const tileHover    = isLight
+    ? "hover:border-black/[0.16] hover:bg-white"
+    : "hover:border-white/[0.16] hover:bg-white/[0.06]";
+  const nameColor    = isLight ? "text-zinc-800"         : "text-white/90";
+  const subColor     = isLight ? "text-black/35"         : "text-white/35";
 
   return (
     <section
       ref={sectionRef}
       id="skills"
-      className={`relative overflow-hidden px-6 py-28 transition-colors duration-300 ${sectionBg}`}
+      className={`relative overflow-hidden py-20 sm:py-24 lg:py-32 transition-colors duration-300 ${sectionBg}`}
     >
+      {/* glows */}
       <div className="pointer-events-none absolute inset-0">
-        <div className={`absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] ${glowCenter}`} />
-        <div className={`absolute left-0 top-0 h-[260px] w-[260px] rounded-full blur-[100px] ${glowCorner}`} />
+        <div className={`absolute left-1/2 top-1/2 h-[500px] w-[500px] lg:h-[700px] lg:w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[130px] ${glowCenter}`} />
+        <div className={`absolute right-0 bottom-0 h-[200px] w-[200px] lg:h-[280px] lg:w-[280px] rounded-full blur-[100px] ${glowCorner}`} />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-7xl">
-        <div className="text-center">
+      <div className="relative z-10 px-6 sm:px-8 lg:px-10">
+
+        {/* heading */}
+        <div className="mb-10 text-center sm:mb-12 lg:mb-16">
           <p
             ref={labelRef}
-            className={`text-xs font-medium uppercase tracking-[0.35em] md:text-sm ${labelColor}`}
+            className={`mb-4 text-[10px] font-medium uppercase tracking-[0.32em] sm:text-xs ${labelColor}`}
           >
             {t.label}
           </p>
-
           <h2
             ref={headingRef}
-            className={`mt-5 text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl ${headingColor}`}
+            className={`text-3xl font-black leading-[1.06] tracking-tight sm:text-4xl md:text-5xl lg:text-6xl ${headingColor}`}
           >
             {t.heading[0]}
             <br />
@@ -153,32 +210,53 @@ export default function SkillsSection() {
           </h2>
         </div>
 
-        <div className="mt-20 grid grid-cols-3 gap-x-8 gap-y-12 lg:grid-cols-6">
+        <div
+          ref={gridRef}
+          className="grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-5 lg:gap-5"
+        >
           {skills.map((skill, index) => {
-            const Icon = skill.icon;
-            // Next.js icon should be dark on light bg
-            const iconColor = skill.name === "NEXT.JS"
-              ? (isLight ? "#000000" : "#ffffff")
-              : skill.color;
+            const Icon      = skill.icon;
+            const dotColor  = skill.color ?? (isLight ? "#18181b" : "#e4e4e7");
+            const iconColor = skill.color ?? (isLight ? "#18181b" : "#e4e4e7");
 
             return (
               <div
                 key={skill.name}
-                ref={(el) => { cardRefs.current[index] = el; }}
-                className="group flex flex-col items-center text-center transition-transform duration-300 hover:-translate-y-1"
+                ref={(el) => { tileRefs.current[index] = el; }}
+                className={`
+                  group flex cursor-default flex-col
+                  rounded-2xl border
+                  p-4 gap-3
+                  sm:p-5 sm:gap-4
+                  lg:p-6 lg:gap-5
+                  ${tileBg} ${tileBorder} ${tileHover}
+                  transition-colors duration-200
+                `}
               >
-                <div className="relative flex h-20 w-20 md:h-24 md:w-24 items-center justify-center rounded-full">
-                  <div
-                    className="absolute inset-0 rounded-full opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100"
-                    style={{ backgroundColor: skill.color }}
-                  />
-                  <div className={`absolute inset-0 rounded-full backdrop-blur-xl ${iconRingBg}`} />
-                  <Icon size={52} color={iconColor} className="relative z-10" />
+                <span
+                  className="shrink-0 inline-flex
+                    text-[26px]
+                    sm:text-[30px]
+                    lg:text-[38px]
+                    transition-transform duration-300 group-hover:scale-110"
+                  style={{ color: iconColor }}
+                >
+                  <Icon />
+                </span>
+
+                <div className="flex flex-col gap-1 lg:gap-1.5">
+                  <span className={`font-semibold leading-tight text-[12px] sm:text-[13px] lg:text-[15px] ${nameColor}`}>
+                    {skill.name}
+                  </span>
+                  <span className={`leading-snug text-[10px] sm:text-[10px] lg:text-[11px] ${subColor}`}>
+                    {skill.sub}
+                  </span>
                 </div>
 
-                <p className={`mt-5 text-sm font-semibold tracking-[0.14em] transition-colors duration-300 ${skillNameColor}`}>
-                  {skill.name}
-                </p>
+                <div
+                  className="mt-auto rounded-full h-[5px] w-[5px] sm:h-[6px] sm:w-[6px] lg:h-2 lg:w-2"
+                  style={{ backgroundColor: dotColor }}
+                />
               </div>
             );
           })}
