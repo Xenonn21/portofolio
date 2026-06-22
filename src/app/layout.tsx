@@ -2,8 +2,8 @@ import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
 
 export const metadata = {
-  title: "Raditya Arjun",
-  description: "Raditya Arjun's Portfolio",
+  title: "Raditya Arjun | Fullstack Developer",
+  description: "Portfolio website of Raditya Arjun",
 };
 
 export default function RootLayout({

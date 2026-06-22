@@ -200,7 +200,7 @@ export default function WorksSection() {
     <section
       ref={sectionRef}
       id="works"
-      className={`relative w-full overflow-hidden px-6 py-28 transition-colors duration-300 ${sectionBg}`}
+      className={`sticky top-0 z-0 w-full overflow-hidden px-6 py-28 transition-colors duration-300 ${sectionBg}`}
     >
       <div className="pointer-events-none absolute inset-0">
         <div
