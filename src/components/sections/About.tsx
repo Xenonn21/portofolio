@@ -1,7 +1,7 @@
 // src/components/sections/About.tsx
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { Code2, Sparkles, Zap } from "lucide-react";
@@ -64,6 +64,10 @@ export default function About() {
   const { language, theme } = useApp();
   const t = content[language];
   const isLight = theme === "light";
+
+  // Index kartu yang sedang ditekan/diklik di mobile (0 = top, 1 = mid, 2 = bottom).
+  // null artinya tidak ada kartu yang aktif → kembali ke posisi default.
+  const [activeCard, setActiveCard] = useState<number | null>(null);
 
   const sectionRef    = useRef<HTMLElement | null>(null);
   const cardTopRef    = useRef<HTMLDivElement | null>(null);
@@ -179,6 +183,16 @@ export default function About() {
     ? "border border-black/10 bg-black/5 text-zinc-700"
     : "border border-white/10 bg-white/5 text-zinc-300";
 
+  // Helper untuk class tambahan saat kartu aktif (tap/hold di mobile).
+  // Kartu yang aktif naik ke z-index paling atas, sedikit terangkat, dan rotasi jadi 0,
+  // sama seperti efek :hover di desktop.
+  const activeCardClass = (index: number) =>
+    activeCard === index ? "!z-[5] -translate-y-2 rotate-0" : "";
+
+  // Handler tap/hold yang bekerja untuk mouse maupun touch.
+  const handleCardActivate = (index: number) => () => setActiveCard(index);
+  const handleCardDeactivate = () => setActiveCard(null);
+
   return (
     <section
       ref={sectionRef}
@@ -193,14 +207,19 @@ export default function About() {
           {/* CARD TOP */}
           <div
             ref={cardTopRef}
+            onClick={handleCardActivate(0)}
+            onTouchStart={handleCardActivate(0)}
+            onTouchEnd={handleCardDeactivate}
+            onMouseLeave={handleCardDeactivate}
             className={`
               group absolute left-[-28px] top-0 z-[3]
               h-[170px] w-[240px] -rotate-[8deg]
               rounded-[30px] border p-5 backdrop-blur-xl
               transition-all duration-300 ease-out
+              cursor-pointer select-none
               hover:z-[5] hover:-translate-y-2 hover:rotate-0
               sm:left-[-50px] sm:h-[184px] sm:w-[250px] sm:p-6
-              ${cardBg} ${cardHover}
+              ${cardBg} ${cardHover} ${activeCardClass(0)}
             `}
           >
             <div className="mb-4 flex items-center gap-4">
@@ -218,14 +237,19 @@ export default function About() {
           {/* CARD MID */}
           <div
             ref={cardMidRef}
+            onClick={handleCardActivate(1)}
+            onTouchStart={handleCardActivate(1)}
+            onTouchEnd={handleCardDeactivate}
+            onMouseLeave={handleCardDeactivate}
             className={`
               group absolute right-0 top-[122px] z-[2]
               h-[170px] w-[240px]
               rounded-[28px] border p-5 backdrop-blur-xl
               transition-all duration-300 ease-out
+              cursor-pointer select-none
               hover:z-[4] hover:-translate-y-2 hover:rotate-0
               sm:top-[136px] sm:h-[184px] sm:w-[250px] sm:p-5
-              ${cardBg} ${cardHover}
+              ${cardBg} ${cardHover} ${activeCardClass(1)}
             `}
           >
             <div className="mb-4 flex items-center gap-3">
@@ -243,14 +267,19 @@ export default function About() {
           {/* CARD BOTTOM */}
           <div
             ref={cardBottomRef}
+            onClick={handleCardActivate(2)}
+            onTouchStart={handleCardActivate(2)}
+            onTouchEnd={handleCardDeactivate}
+            onMouseLeave={handleCardDeactivate}
             className={`
               group absolute left-[-20px] top-[224px] z-[1]
               h-[170px] w-[240px] rotate-[8deg]
               rounded-[28px] border p-5 backdrop-blur-xl
               transition-all duration-300 ease-out
+              cursor-pointer select-none
               hover:z-[3] hover:-translate-y-2 hover:rotate-0
               sm:left-[-50px] sm:top-[242px] sm:h-[178px] sm:w-[240px] sm:p-5
-              ${cardBg} ${cardHover}
+              ${cardBg} ${cardHover} ${activeCardClass(2)}
             `}
           >
             <div className="mb-4 flex items-center gap-3">
