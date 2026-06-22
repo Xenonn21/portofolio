@@ -92,6 +92,36 @@ export default function WorksSection() {
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const cardRefs   = useRef<(HTMLElement | null)[]>([]);
 
+  // ── Mobile tap-to-show-tooltip state ───────────────────────────────────
+  // index dari work + "globe" / "github" yang sedang aktif (di-tap) di mobile
+  const [activeTooltip, setActiveTooltip] = React.useState<string | null>(null);
+
+  useEffect(() => {
+    // tutup tooltip kalau user tap di luar area tombol
+    const handleOutsideTap = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-tooltip-trigger]")) {
+        setActiveTooltip(null);
+      }
+    };
+    document.addEventListener("click", handleOutsideTap);
+    return () => document.removeEventListener("click", handleOutsideTap);
+  }, []);
+
+  const handleTooltipTap = (key: string) => (e: React.MouseEvent) => {
+    // hanya intercept tap pertama di mobile/touch agar tooltip muncul dulu
+    const isTouch = window.matchMedia("(hover: none)").matches;
+    if (!isTouch) return; // di desktop biarkan hover bekerja & link langsung jalan
+
+    if (activeTooltip !== key) {
+      e.preventDefault();
+      setActiveTooltip(key);
+    } else {
+      // tap kedua → biarkan link berjalan, lalu tutup tooltip
+      setActiveTooltip(null);
+    }
+  };
+
   useEffect(() => {
     const refresh = () => ScrollTrigger.refresh();
     window.addEventListener("hashchange", refresh);
@@ -187,14 +217,21 @@ export default function WorksSection() {
     : "bg-white/[0.07] text-white/60 border border-white/[0.08]";
 
   // icon button (globe / github) — di baris view project
+  // tambahkan active: agar warna juga berubah saat tombol di-tap di mobile
   const iconBtnClass = isLight
-    ? "border border-black/10 bg-black/5 text-zinc-700 hover:bg-black hover:text-white"
-    : "border border-white/10 bg-white/10 text-white hover:bg-white hover:text-black";
+    ? "border border-black/10 bg-black/5 text-zinc-700 hover:bg-black hover:text-white active:bg-black active:text-white"
+    : "border border-white/10 bg-white/10 text-white hover:bg-white hover:text-black active:bg-white active:text-black";
 
   // tooltip popup
   const tooltipClass = isLight
     ? "bg-zinc-900 text-white"
     : "bg-white text-zinc-900";
+
+  // helper untuk class tooltip: tampil saat hover (desktop) ATAU saat activeTooltip cocok (mobile tap)
+  const tooltipVisibility = (key: string, groupName: string) =>
+    `group-hover/${groupName}:opacity-100 group-hover/${groupName}:scale-100 group-hover/${groupName}:translate-y-0 ${
+      activeTooltip === key ? "opacity-100 scale-100 translate-y-0" : ""
+    }`;
 
   return (
     <section
@@ -229,154 +266,166 @@ export default function WorksSection() {
 
         {/* ── Cards ── */}
         <div className="mt-20 grid gap-8 md:mt-24 md:grid-cols-2 md:gap-10">
-          {works.map((work, index) => (
-            <article
-              key={work.titleEn}
-              ref={(el) => { cardRefs.current[index] = el; }}
-              className={`
-                group relative overflow-hidden rounded-[30px]
-                backdrop-blur-xl
-                transition-transform duration-300
-                hover:-translate-y-1
-                ${cardBorder}
-              `}
-            >
-              {/* Image */}
-              <div className="relative h-[300px] overflow-hidden sm:h-[360px] md:h-[380px]">
-                <img
-                  src={work.image}
-                  alt={language === "en" ? work.titleEn : work.titleId}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div
-                  className={`absolute inset-0 ${
-                    isLight
-                      ? "bg-gradient-to-t from-white/90 via-white/20 to-transparent"
-                      : "bg-gradient-to-t from-black via-black/25 to-transparent"
-                  }`}
-                />
-                <div className="absolute inset-0 bg-black/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-              </div>
+          {works.map((work, index) => {
+            const globeKey  = `${index}-globe`;
+            const githubKey = `${index}-github`;
 
-              {/* Card body */}
-              <div className="absolute bottom-0 left-0 w-full p-6 md:p-8">
-
-                {/* Row 1 — category + title */}
-                <div>
-                  <p className={`text-xs uppercase tracking-[0.22em] md:text-sm ${categoryColor}`}>
-                    {language === "en" ? work.categoryEn : work.categoryId}
-                  </p>
-                  <h3 className={`mt-2 text-2xl font-bold md:text-3xl ${titleColor}`}>
-                    {language === "en" ? work.titleEn : work.titleId}
-                  </h3>
+            return (
+              <article
+                key={work.titleEn}
+                ref={(el) => { cardRefs.current[index] = el; }}
+                className={`
+                  group relative overflow-hidden rounded-[30px]
+                  backdrop-blur-xl
+                  transition-transform duration-300
+                  hover:-translate-y-1
+                  ${cardBorder}
+                `}
+              >
+                {/* Image */}
+                <div className="relative h-[300px] overflow-hidden sm:h-[360px] md:h-[380px]">
+                  <img
+                    src={work.image}
+                    alt={language === "en" ? work.titleEn : work.titleId}
+                    loading="lazy"
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div
+                    className={`absolute inset-0 ${
+                      isLight
+                        ? "bg-gradient-to-t from-white/90 via-white/20 to-transparent"
+                        : "bg-gradient-to-t from-black via-black/25 to-transparent"
+                    }`}
+                  />
+                  <div className="absolute inset-0 bg-black/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
                 </div>
 
-                {/* Row 2 — Tech stack pills (menggantikan tombol globe/github) */}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {work.stack.map(({ icon: Icon, label }) => (
-                    <span
-                      key={label}
-                      className={`
-                        inline-flex items-center gap-1.5 rounded-full px-3 py-1
-                        text-xs font-medium backdrop-blur-md
-                        transition-opacity duration-200
-                        ${stackPill}
-                      `}
-                    >
-                      <Icon size={12} />
-                      {label}
-                    </span>
-                  ))}
-                </div>
+                {/* Card body */}
+                <div className="absolute bottom-0 left-0 w-full p-6 md:p-8">
 
-                {/* Row 3 — year + view project + icon buttons */}
-                <div className="mt-5 flex items-center justify-between">
-                  <span className={`text-sm ${yearColor}`}>{work.year}</span>
-
-                  {/* View project + icon buttons */}
-                  <div className="flex items-center gap-2">
-
-                    {/* Globe button dengan tooltip */}
-
-                    <div className="relative group/globe">
-                      <a
-                        href={work.siteUrl}
-                        aria-label={t.viewProject}
-                        className={`
-                          flex h-10 w-10 items-center justify-center rounded-full
-                          backdrop-blur-xl transition-all duration-300
-                          ${iconBtnClass}
-                        `}
-                      >
-                        <Globe size={17} />
-                      </a>
-                      {/* Tooltip */}
-                      <span
-                        className={`
-                          pointer-events-none absolute bottom-full left-1/2 mb-2
-                          -translate-x-1/2 whitespace-nowrap rounded-lg px-2.5 py-1
-                          text-xs font-medium shadow-lg
-                          opacity-0 scale-95 translate-y-1
-                          transition-all duration-200
-                          group-hover/globe:opacity-100 group-hover/globe:scale-100 group-hover/globe:translate-y-0
-                          ${tooltipClass}
-                        `}
-                      >
-                        {t.viewProject}
-                        {/* Arrow */}
-                        <span
-                          className={`
-                            absolute left-1/2 top-full -translate-x-1/2
-                            border-4 border-transparent
-                            ${isLight ? "border-t-zinc-900" : "border-t-white"}
-                          `}
-                        />
-                      </span>
-                    </div>
-
-                    {/* GitHub button dengan tooltip */}
-                    <div className="relative group/github">
-                      <a
-                        href={work.githubUrl}
-                        aria-label={t.viewSource}
-                        className={`
-                          flex h-10 w-10 items-center justify-center rounded-full
-                          backdrop-blur-xl transition-all duration-300
-                          ${iconBtnClass}
-                        `}
-                      >
-                        <FaGithub size={16} />
-                      </a>
-                      {/* Tooltip */}
-                      <span
-                        className={`
-                          pointer-events-none absolute bottom-full left-1/2 mb-2
-                          -translate-x-1/2 whitespace-nowrap rounded-lg px-2.5 py-1
-                          text-xs font-medium shadow-lg
-                          opacity-0 scale-95 translate-y-1
-                          transition-all duration-200
-                          group-hover/github:opacity-100 group-hover/github:scale-100 group-hover/github:translate-y-0
-                          ${tooltipClass}
-                        `}
-                      >
-                        {t.viewSource}
-                        <span
-                          className={`
-                            absolute left-1/2 top-full -translate-x-1/2
-                            border-4 border-transparent
-                            ${isLight ? "border-t-zinc-900" : "border-t-white"}
-                          `}
-                        />
-                      </span>
-                    </div>
-
+                  {/* Row 1 — category + title */}
+                  <div>
+                    <p className={`text-xs uppercase tracking-[0.22em] md:text-sm ${categoryColor}`}>
+                      {language === "en" ? work.categoryEn : work.categoryId}
+                    </p>
+                    <h3 className={`mt-2 text-2xl font-bold md:text-3xl ${titleColor}`}>
+                      {language === "en" ? work.titleEn : work.titleId}
+                    </h3>
                   </div>
-                </div>
 
-              </div>
-            </article>
-          ))}
+                  {/* Row 2 — Tech stack pills */}
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {work.stack.map(({ icon: Icon, label }) => (
+                      <span
+                        key={label}
+                        className={`
+                          inline-flex items-center gap-1.5 rounded-full px-3 py-1
+                          text-xs font-medium backdrop-blur-md
+                          transition-opacity duration-200
+                          ${stackPill}
+                        `}
+                      >
+                        <Icon size={12} />
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Row 3 — year + view project + icon buttons */}
+                  <div className="mt-5 flex items-center justify-between">
+                    <span className={`text-sm ${yearColor}`}>{work.year}</span>
+
+                    {/* View project + icon buttons */}
+                    <div className="flex items-center gap-2">
+
+                      {/* Globe button dengan tooltip */}
+                      <div
+                        className="relative group/globe"
+                        data-tooltip-trigger
+                      >
+                        <a
+                          href={work.siteUrl}
+                          aria-label={t.viewProject}
+                          onClick={handleTooltipTap(globeKey)}
+                          className={`
+                            flex h-10 w-10 items-center justify-center rounded-full
+                            backdrop-blur-xl transition-all duration-300
+                            ${iconBtnClass}
+                          `}
+                        >
+                          <Globe size={17} />
+                        </a>
+                        {/* Tooltip */}
+                        <span
+                          className={`
+                            pointer-events-none absolute bottom-full left-1/2 mb-2
+                            -translate-x-1/2 whitespace-nowrap rounded-lg px-2.5 py-1
+                            text-xs font-medium shadow-lg
+                            opacity-0 scale-95 translate-y-1
+                            transition-all duration-200
+                            ${tooltipVisibility(globeKey, "globe")}
+                            ${tooltipClass}
+                          `}
+                        >
+                          {t.viewProject}
+                          {/* Arrow */}
+                          <span
+                            className={`
+                              absolute left-1/2 top-full -translate-x-1/2
+                              border-4 border-transparent
+                              ${isLight ? "border-t-zinc-900" : "border-t-white"}
+                            `}
+                          />
+                        </span>
+                      </div>
+
+                      {/* GitHub button dengan tooltip */}
+                      <div
+                        className="relative group/github"
+                        data-tooltip-trigger
+                      >
+                        <a
+                          href={work.githubUrl}
+                          aria-label={t.viewSource}
+                          onClick={handleTooltipTap(githubKey)}
+                          className={`
+                            flex h-10 w-10 items-center justify-center rounded-full
+                            backdrop-blur-xl transition-all duration-300
+                            ${iconBtnClass}
+                          `}
+                        >
+                          <FaGithub size={16} />
+                        </a>
+                        {/* Tooltip */}
+                        <span
+                          className={`
+                            pointer-events-none absolute bottom-full left-1/2 mb-2
+                            -translate-x-1/2 whitespace-nowrap rounded-lg px-2.5 py-1
+                            text-xs font-medium shadow-lg
+                            opacity-0 scale-95 translate-y-1
+                            transition-all duration-200
+                            ${tooltipVisibility(githubKey, "github")}
+                            ${tooltipClass}
+                          `}
+                        >
+                          {t.viewSource}
+                          <span
+                            className={`
+                              absolute left-1/2 top-full -translate-x-1/2
+                              border-4 border-transparent
+                              ${isLight ? "border-t-zinc-900" : "border-t-white"}
+                            `}
+                          />
+                        </span>
+                      </div>
+
+                    </div>
+                  </div>
+
+                </div>
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>
